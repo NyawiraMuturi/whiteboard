@@ -1,12 +1,13 @@
-import { Button } from "@/components/ui/button"
+
 import './App.css'
+import Board from "./pages/Board"
 
 function App() {
 
 
   return (
     <>
-      <Button>Click me</Button>
+      <Board />
     </>
   )
 }
