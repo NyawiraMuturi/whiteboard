@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Stage, Layer, Rect, Circle, Line, Image } from 'react-konva';
+import { Stage, Layer, Rect, Circle, Line, Image, Star } from 'react-konva';
 import { Shape, History } from '@/lib/types/types';
 import { useUploadImage, useDrawing } from '@/hooks';
-import { Redo2, Undo2, Palette, Minus, RectangleHorizontal, Star, PenLine, CircleIcon, Eraser, Image as ImageIcon, Share2, Download } from "lucide-react"
+import { Redo2, Undo2, Palette, Minus, RectangleHorizontal, Star as StarIcon, PenLine, CircleIcon, Eraser, Image as ImageIcon, Share2, Download } from "lucide-react"
 import { HexColorPicker } from "react-colorful";
 import {
     Menubar,
@@ -24,6 +24,8 @@ const Board = () => {
         lines,
         startDrawing,
         startErasing,
+        selectShape,
+        changeColor,
         handleMouseDown,
         handleMouseMove,
         handleMouseUp,
@@ -96,7 +98,7 @@ const Board = () => {
                         <Line
                             key={i}
                             points={line.points}
-                            stroke={line.isErasing ? '#ffffff' : '#000000'} // Erase or draw
+                            stroke={line.isErasing ? '#ffffff' : '#000000'}
                             strokeWidth={5}
                             tension={0.5}
                             lineCap="round"
@@ -137,6 +139,22 @@ const Board = () => {
                             );
                         }
 
+                        if (shape.type === 'star') {
+                            return (
+                                <Star
+                                    key={shape.id}
+                                    x={shape.x}
+                                    y={shape.y}
+                                    numPoints={shape.numPoints}
+                                    innerRadius={shape.innerRadius}
+                                    outerRadius={shape.outerRadius}
+                                    fill={shape.fill}
+                                    draggable
+                                    onDragEnd={(e) => handleDragEnd(shape.id, e)}
+                                />
+                            );
+                        }
+
                         if (shape.type === 'image') {
                             return (
                                 <Image
@@ -168,7 +186,7 @@ const Board = () => {
                     <MenubarMenu>
                         <MenubarTrigger><Palette onClick={() => setShowColorPicker(!showColorPicker)} /></MenubarTrigger>
                         <MenubarContent>
-                            <HexColorPicker color={color} onChange={setColor} />
+                            <HexColorPicker color={color} onChange={(newColor) => { setColor(newColor); changeColor(newColor); }} />
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
@@ -176,7 +194,7 @@ const Board = () => {
                         <MenubarContent>
                             <MenubarItem>  <CircleIcon /> </MenubarItem>
                             <MenubarItem> <RectangleHorizontal /> </MenubarItem>
-                            <MenubarItem> <Star /> </MenubarItem>
+                            <MenubarItem> <StarIcon /> </MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
