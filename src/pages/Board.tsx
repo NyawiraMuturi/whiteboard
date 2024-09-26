@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import Konva from 'konva';
 import { Stage, Layer, Rect, Circle, Line, Image } from 'react-konva';
 import { Shape, History } from '@/lib/types/types';
-import { useUploadImage } from '@/hooks';
+import { useUploadImage, useDrawing } from '@/hooks';
 import { Redo2, Undo2, Palette, Minus, RectangleHorizontal, Star, PenLine, CircleIcon, Eraser, Image as ImageIcon, Share2, Download } from "lucide-react"
 import { HexColorPicker } from "react-colorful";
 import {
@@ -21,7 +20,14 @@ const Board = () => {
     const { uploadImage, imageData } = useUploadImage();
     const [color, setColor] = useState("#b32aa9");
     const [showColorPicker, setShowColorPicker] = useState(false);
-    const [drawingMode, setDrawingMode] = useState<Shape['type'] | null>(null);
+    const {
+        lines,
+        startDrawing,
+        startErasing,
+        handleMouseDown,
+        handleMouseMove,
+        handleMouseUp,
+    } = useDrawing();
 
 
     useEffect(() => {
@@ -73,52 +79,32 @@ const Board = () => {
         setFuture(future.slice(1));
     };
 
-    const handleCanvasClick = (e: any) => {
-        if (!drawingMode) return;
 
-        const pos = e.target.getStage().getPointerPosition();
-        let newShape: Shape;
-
-        if (drawingMode === 'rect') {
-            newShape = {
-                id: `rect${shapes.length + 1}`,
-                type: 'rect',
-                x: pos.x,
-                y: pos.y,
-                width: 100,
-                height: 100,
-                fill: color,
-            };
-        } else if (drawingMode === 'circle') {
-            newShape = {
-                id: `circle${shapes.length + 1}`,
-                type: 'circle',
-                x: pos.x,
-                y: pos.y,
-                radius: 50,
-                fill: color,
-            };
-        } else if (drawingMode === 'line') {
-            newShape = {
-                id: `line${shapes.length + 1}`,
-                type: 'line',
-                x: pos.x,
-                y: pos.y,
-                points: [0, 0, 100, 0, 100, 100],
-                fillLinearGradientColorStops: [0, color, 1, 'yellow'],
-            };
-        } else {
-            return;
-        }
-
-        setShapes([...shapes, newShape]);
-        setDrawingMode(null);
-    };
 
     return (
         <div className="relative">
-            <Stage width={window.innerWidth} height={window.innerHeight}>
+            <Stage
+                width={window.innerWidth}
+                height={window.innerHeight}
+                onMouseDown={(e) => handleMouseDown(e.target.getStage())}
+                onMouseMove={(e) => handleMouseMove(e.target.getStage())}
+                onMouseUp={handleMouseUp}
+            >
                 <Layer>
+
+                    {lines.map((line, i) => (
+                        <Line
+                            key={i}
+                            points={line.points}
+                            stroke={line.isErasing ? '#ffffff' : '#000000'} // Erase or draw
+                            strokeWidth={5}
+                            tension={0.5}
+                            lineCap="round"
+                            globalCompositeOperation={
+                                line.isErasing ? 'destination-out' : 'source-over'
+                            }
+                        />
+                    ))}
 
                     {shapes.map((shape) => {
                         if (shape.type === 'rect') {
@@ -145,24 +131,6 @@ const Board = () => {
                                     y={shape.y}
                                     radius={shape.radius}
                                     fill={shape.fill}
-                                    draggable
-                                    onDragEnd={(e) => handleDragEnd(shape.id, e)}
-                                />
-                            );
-                        }
-                        if (shape.type === 'line') {
-                            return (
-                                <Line
-                                    key={shape.id}
-                                    x={shape.x}
-                                    y={shape.y}
-                                    points={shape.points}
-                                    tension={0.5}
-                                    closed
-                                    stroke="black"
-                                    fillLinearGradientStartPoint={{ x: -50, y: -50 }}
-                                    fillLinearGradientEndPoint={{ x: 50, y: 50 }}
-                                    fillLinearGradientColorStops={shape.fillLinearGradientColorStops}
                                     draggable
                                     onDragEnd={(e) => handleDragEnd(shape.id, e)}
                                 />
@@ -212,10 +180,10 @@ const Board = () => {
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger><PenLine /></MenubarTrigger>
+                        <MenubarTrigger onClick={startDrawing}><PenLine /></MenubarTrigger>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger><Eraser /></MenubarTrigger>
+                        <MenubarTrigger onClick={startErasing}><Eraser /></MenubarTrigger>
                     </MenubarMenu>
                     <MenubarMenu>
                         <MenubarTrigger onClick={uploadImage}><ImageIcon /></MenubarTrigger>

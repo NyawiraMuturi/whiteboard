@@ -17,6 +17,3 @@ export type History = {
     shapes: Shape[];
 };
 
-export type BoardProps = {
-    initialShapes?: Shape[];
-};
