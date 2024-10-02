@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 
+
+
 //export images
 
 export const useUploadImage = () => {
@@ -43,93 +45,170 @@ export const useUploadImage = () => {
     return { uploadImage, imageData };
 };
 
+
 export const useDrawing = () => {
     const [lines, setLines] = useState<any[]>([]);
+    const [arrows, setArrows] = useState<any[]>([]);
+    const [rectangles, setRectangles] = useState<any[]>([]);
+    const [circles, setCircles] = useState<any[]>([]);
+    const [stars, setStars] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [isErasing, setIsErasing] = useState(false);
+    const [isDrawingArrow, setIsDrawingArrow] = useState(false);
+    const [isDrawingCircle, setIsDrawingCircle] = useState(false);
+    const [isDrawingRectangle, setIsDrawingRectangle] = useState(false);
+    const [isDrawingStar, setIsDrawingStar] = useState(false);
     const lastPosRef = useRef<{ x: number, y: number } | null>(null);
 
-    // Function to enable drawing mode
     const startDrawing = useCallback(() => {
-        setIsErasing(false);  // Disable erasing
-        setIsDrawing(true);   // Enable drawing
+        setIsErasing(false);
+        setIsDrawing(true);
+        setIsDrawingArrow(false);
+        setIsDrawingCircle(false);
+        setIsDrawingRectangle(false);
+        setIsDrawingStar(false);
     }, []);
 
-    // Function to enable erasing mode
     const startErasing = useCallback(() => {
         setIsDrawing(false);
         setIsErasing(true);
+        setIsDrawingArrow(false);
+        setIsDrawingCircle(false);
+        setIsDrawingRectangle(false);
+        setIsDrawingStar(false);
     }, []);
 
-    // Function to handle mouse down (start drawing)
+    const startArrowDrawing = useCallback(() => {
+        setIsDrawing(false);
+        setIsErasing(false);
+        setIsDrawingArrow(true);
+        setIsDrawingCircle(false);
+        setIsDrawingRectangle(false);
+        setIsDrawingStar(false);
+    }, []);
+
+    const startCircleDrawing = useCallback(() => {
+        setIsDrawing(false);
+        setIsErasing(false);
+        setIsDrawingArrow(false);
+        setIsDrawingCircle(true);
+        setIsDrawingRectangle(false);
+        setIsDrawingStar(false);
+    }, []);
+
+    const startRectangleDrawing = useCallback(() => {
+        setIsDrawing(false);
+        setIsErasing(false);
+        setIsDrawingArrow(false);
+        setIsDrawingCircle(false);
+        setIsDrawingRectangle(true);
+        setIsDrawingStar(false);
+    }, []);
+
+    const startStarDrawing = useCallback(() => {
+        setIsDrawing(false);
+        setIsErasing(false);
+        setIsDrawingArrow(false);
+        setIsDrawingCircle(false);
+        setIsDrawingRectangle(false);
+        setIsDrawingStar(true);
+    }, []);
+
     const handleMouseDown = (stage: any) => {
         const pos = stage.getPointerPosition();
-        if (!isDrawing && !isErasing) return;
+        if (!isDrawing && !isErasing && !isDrawingArrow && !isDrawingCircle && !isDrawingRectangle && !isDrawingStar) return;
 
         if (pos) {
-            lastPosRef.current = { x: pos.x, y: pos.y }; // Store the initial position
+            lastPosRef.current = { x: pos.x, y: pos.y };
 
-            setLines((prevLines) => [
-                ...prevLines,
-                {
-                    points: [pos.x, pos.y],
-                    isErasing, // Track if we are erasing or drawing
-                },
-            ]);
+            if (isDrawingArrow) {
+                setArrows((prevArrows) => [
+                    ...prevArrows,
+                    { points: [pos.x, pos.y] },
+                ]);
+            } else if (isDrawingCircle) {
+                setCircles((prevCircles) => [
+                    ...prevCircles,
+                    { x: pos.x, y: pos.y, radius: 0 },
+                ]);
+            } else if (isDrawingRectangle) {
+                setRectangles((prevRectangles) => [
+                    ...prevRectangles,
+                    { x: pos.x, y: pos.y, width: 0, height: 0 },
+                ]);
+            } else if (isDrawingStar) {
+                setStars((prevStars) => [
+                    ...prevStars,
+                    { x: pos.x, y: pos.y, numPoints: 5, innerRadius: 0, outerRadius: 0 },
+                ]);
+            }
         }
     };
 
-    // Function to handle mouse movement (while drawing/erasing)
     const handleMouseMove = (stage: any) => {
-        if (!isDrawing && !isErasing) return;
-
         const pos = stage.getPointerPosition();
         if (!pos || !lastPosRef.current) return;
 
-        const lastPos = lastPosRef.current;
+        const { x, y } = lastPosRef.current;
 
-        // Update only if the mouse has moved significantly (to prevent rapid updates)
-        if (Math.abs(pos.x - lastPos.x) > 1 || Math.abs(pos.y - lastPos.y) > 1) {
-            lastPosRef.current = { x: pos.x, y: pos.y }; // Update the last position
+        if (isDrawingArrow) {
+            setArrows((prevArrows) => {
+                if (prevArrows.length === 0) return prevArrows;
 
-            // Use requestAnimationFrame for smoother updates
-            requestAnimationFrame(() => {
-                setLines((prevLines) => {
-                    if (prevLines.length === 0) return prevLines;
-
-                    const lastLine = prevLines[prevLines.length - 1];
-                    if (!lastLine || !lastLine.points) {
-                        return prevLines;
-                    }
-
-                    const lastPointX = lastLine.points[lastLine.points.length - 2];
-                    const lastPointY = lastLine.points[lastLine.points.length - 1];
-
-                    // Only update if new points differ from the last
-                    if (lastPointX !== pos.x || lastPointY !== pos.y) {
-                        lastLine.points = lastLine.points.concat([pos.x, pos.y]);
-                        return [...prevLines.slice(0, -1), lastLine];
-                    }
-
-                    return prevLines;
-                });
+                const lastArrow = prevArrows[prevArrows.length - 1];
+                lastArrow.points = [x, y, pos.x, pos.y];
+                return [...prevArrows.slice(0, -1), lastArrow];
+            });
+        } else if (isDrawingCircle) {
+            setCircles((prevCircles) => {
+                const lastCircle = prevCircles[prevCircles.length - 1];
+                const radius = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
+                lastCircle.radius = radius;
+                return [...prevCircles.slice(0, -1), lastCircle];
+            });
+        } else if (isDrawingRectangle) {
+            setRectangles((prevRectangles) => {
+                const lastRectangle = prevRectangles[prevRectangles.length - 1];
+                lastRectangle.width = pos.x - x;
+                lastRectangle.height = pos.y - y;
+                return [...prevRectangles.slice(0, -1), lastRectangle];
+            });
+        } else if (isDrawingStar) {
+            setStars((prevStars) => {
+                const lastStar = prevStars[prevStars.length - 1];
+                const outerRadius = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
+                lastStar.outerRadius = outerRadius;
+                lastStar.innerRadius = outerRadius / 2; // Inner radius is typically smaller
+                return [...prevStars.slice(0, -1), lastStar];
             });
         }
     };
 
-    // Function to handle mouse up (end drawing/erasing)
     const handleMouseUp = () => {
         setIsDrawing(false);
         setIsErasing(false);
+        setIsDrawingArrow(false);
+        setIsDrawingCircle(false);
+        setIsDrawingRectangle(false);
+        setIsDrawingStar(false);
         lastPosRef.current = null;
     };
 
     return {
         lines,
+        arrows,
+        rectangles,
+        circles,
+        stars,
         startDrawing,
+        startArrowDrawing,
+        startCircleDrawing,
+        startRectangleDrawing,
+        startStarDrawing,
         startErasing,
         handleMouseDown,
         handleMouseMove,
         handleMouseUp,
     };
 };
+

@@ -1,4 +1,4 @@
-export type ShapeType = 'rect' | 'circle' | 'line';
+export type ShapeType = 'rect' | 'circle' | 'line' | 'image' | 'star' | 'arrow';
 
 export type Shape = {
     id: string;

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Stage, Layer, Rect, Circle, Line, Image, Star } from 'react-konva';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Stage, Layer, Rect, Circle, Line, Image, Star, Arrow } from 'react-konva';
 import { Shape, History } from '@/lib/types/types';
 import { useUploadImage, useDrawing } from '@/hooks';
-import { Redo2, Undo2, Palette, Minus, RectangleHorizontal, Star as StarIcon, PenLine, CircleIcon, Eraser, Image as ImageIcon, Share2, Download } from "lucide-react"
+import { Redo2, Undo2, Palette, Minus, RectangleHorizontal, Star as StarIcon, PenLine, CircleIcon, Eraser, Image as ImageIcon, Share2, Download, ArrowLeftIcon } from "lucide-react"
 import { HexColorPicker } from "react-colorful";
 import {
     Menubar,
@@ -20,12 +20,19 @@ const Board = () => {
     const { uploadImage, imageData } = useUploadImage();
     const [color, setColor] = useState("#b32aa9");
     const [showColorPicker, setShowColorPicker] = useState(false);
+    const stageRef = useRef(null)
     const {
         lines,
+        arrows,
+        rectangles,
+        circles,
+        stars,
         startDrawing,
+        startArrowDrawing,
+        startCircleDrawing,
+        startRectangleDrawing,
+        startStarDrawing,
         startErasing,
-        selectShape,
-        changeColor,
         handleMouseDown,
         handleMouseMove,
         handleMouseUp,
@@ -81,6 +88,21 @@ const Board = () => {
         setFuture(future.slice(1));
     };
 
+    const downloadURI = (uri: string | undefined, name: string) => {
+        const link = document.createElement("a");
+        link.download = name;
+        link.href = uri || "";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const onExportClick = useCallback(() => {
+        const dataUri = stageRef?.current?.toDataURL({ pixelRatio: 3 });
+        downloadURI(dataUri, "image.png");
+    }, []);
+
+
 
 
     return (
@@ -91,8 +113,17 @@ const Board = () => {
                 onMouseDown={(e) => handleMouseDown(e.target.getStage())}
                 onMouseMove={(e) => handleMouseMove(e.target.getStage())}
                 onMouseUp={handleMouseUp}
+                ref={stageRef}
             >
                 <Layer>
+                    <Rect
+                        x={0}
+                        y={0}
+                        width={window.innerWidth}
+                        height={window.innerHeight}
+                        fill="white"
+                        id="bg"
+                    />
 
                     {lines.map((line, i) => (
                         <Line
@@ -108,52 +139,52 @@ const Board = () => {
                         />
                     ))}
 
+                    {arrows.map((arrow, i) => (
+                        <Arrow
+                            key={i}
+                            points={arrow.points}
+                            pointerLength={10}
+                            pointerWidth={10}
+                            fill="#000"
+                            stroke="#000"
+                            strokeWidth={4}
+                        />
+                    ))}
+
+                    {circles.map((circle, i) => (
+                        <Circle
+                            key={i}
+                            x={circle.x}
+                            y={circle.y}
+                            radius={circle.radius}
+                            fill="#000"
+                        />
+                    ))}
+
+                    {stars.map((star, i) => (
+                        <Star
+                            key={i}
+                            x={star.x}
+                            y={star.y}
+                            numPoints={star.numPoints}
+                            innerRadius={star.innerRadius}
+                            outerRadius={star.outerRadius}
+                            fill="#000"
+                        />
+                    ))}
+
+                    {rectangles.map((rect, i) => (
+                        <Rect
+                            key={i}
+                            x={rect.x}
+                            y={rect.y}
+                            width={rect.width}
+                            height={rect.height}
+                            fill="#000"
+                        />
+                    ))}
+
                     {shapes.map((shape) => {
-                        if (shape.type === 'rect') {
-                            return (
-                                <Rect
-                                    key={shape.id}
-                                    x={shape.x}
-                                    y={shape.y}
-                                    width={shape.width}
-                                    height={shape.height}
-                                    fill={shape.fill}
-                                    shadowBlur={10}
-                                    draggable
-                                    onDragEnd={(e) => handleDragEnd(shape.id, e)}
-                                />
-                            );
-                        }
-
-                        if (shape.type === 'circle') {
-                            return (
-                                <Circle
-                                    key={shape.id}
-                                    x={shape.x}
-                                    y={shape.y}
-                                    radius={shape.radius}
-                                    fill={shape.fill}
-                                    draggable
-                                    onDragEnd={(e) => handleDragEnd(shape.id, e)}
-                                />
-                            );
-                        }
-
-                        if (shape.type === 'star') {
-                            return (
-                                <Star
-                                    key={shape.id}
-                                    x={shape.x}
-                                    y={shape.y}
-                                    numPoints={shape.numPoints}
-                                    innerRadius={shape.innerRadius}
-                                    outerRadius={shape.outerRadius}
-                                    fill={shape.fill}
-                                    draggable
-                                    onDragEnd={(e) => handleDragEnd(shape.id, e)}
-                                />
-                            );
-                        }
 
                         if (shape.type === 'image') {
                             return (
@@ -192,9 +223,10 @@ const Board = () => {
                     <MenubarMenu>
                         <MenubarTrigger><Minus /></MenubarTrigger>
                         <MenubarContent>
-                            <MenubarItem>  <CircleIcon /> </MenubarItem>
-                            <MenubarItem> <RectangleHorizontal /> </MenubarItem>
-                            <MenubarItem> <StarIcon /> </MenubarItem>
+                            <MenubarItem> <ArrowLeftIcon onClick={startArrowDrawing} /></MenubarItem>
+                            <MenubarItem>  <CircleIcon onClick={startCircleDrawing} /> </MenubarItem>
+                            <MenubarItem> <RectangleHorizontal onClick={startRectangleDrawing} /> </MenubarItem>
+                            <MenubarItem> <StarIcon onClick={startStarDrawing} /> </MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
@@ -210,7 +242,7 @@ const Board = () => {
                         <MenubarTrigger><Share2 /></MenubarTrigger>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger><Download /></MenubarTrigger>
+                        <MenubarTrigger><Download onClick={onExportClick} /></MenubarTrigger>
                     </MenubarMenu>
 
                 </Menubar>
