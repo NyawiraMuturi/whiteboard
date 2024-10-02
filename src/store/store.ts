@@ -2,16 +2,16 @@ import { create } from "zustand";
 
 type Store = {
     shapeColor: string;
-    backgroundColor: string;
+    backgroundImage: string | null;
     setShapeColor: (color: string) => void;
-    setBackgroundColor: (color: string) => void;
+    setBackgroundImage: (image: string | null) => void;
 };
 
 export const useStore = create<Store>((set) => ({
     shapeColor: '#000000',
-    backgroundColor: '#ffffff',
+    backgroundImage: null,
     setShapeColor: (color: string) => set({ shapeColor: color }),
-    setBackgroundColor: (color: string) => set({ backgroundColor: color }),
+    setBackgroundImage: (image: string | null) => set({ backgroundImage: image }),
 }));
 
 

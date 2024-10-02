@@ -22,8 +22,8 @@ const Board = () => {
     const [showColorPicker, setShowColorPicker] = useState(false);
     const shapeColor = useStore((state) => state.shapeColor);
     const setShapeColor = useStore((state) => state.setShapeColor);
-    const backgroundColor = useStore((state) => state.backgroundColor);
-    const setBackgroundColor = useStore((state) => state.setBackgroundColor);
+    const backgroundImage = useStore((state) => state.setBackgroundImage);
+    const setBackgroundImage = useStore((state) => state.setBackgroundImage);
     const stageRef = useRef(null)
     const {
         lines,
@@ -168,7 +168,6 @@ const Board = () => {
                         width={window.innerWidth}
                         height={window.innerHeight}
                         fill="white"
-                        id="bg"
                     />
 
                     {lines.map((line, i) => (
