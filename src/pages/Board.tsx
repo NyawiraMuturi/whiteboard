@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Stage, Layer, Rect, Circle, Line, Image, Star, Arrow } from 'react-konva';
 import { Shape, History } from '@/lib/types/types';
 import { useUploadImage, useDrawing } from '@/hooks';
+import { useStore } from '@/store/store';
 import { Redo2, Undo2, Palette, Minus, RectangleHorizontal, Star as StarIcon, PenLine, CircleIcon, Eraser, Image as ImageIcon, Share2, Download, ArrowLeftIcon } from "lucide-react"
 import { HexColorPicker } from "react-colorful";
 import {
@@ -18,8 +19,11 @@ const Board = () => {
     const [future, setFuture] = useState<History[]>([]);
     const [shapes, setShapes] = useState<Shape[]>([]);
     const { uploadImage, imageData } = useUploadImage();
-    const [color, setColor] = useState("#b32aa9");
     const [showColorPicker, setShowColorPicker] = useState(false);
+    const shapeColor = useStore((state) => state.shapeColor);
+    const setShapeColor = useStore((state) => state.setShapeColor);
+    const backgroundColor = useStore((state) => state.backgroundColor);
+    const setBackgroundColor = useStore((state) => state.setBackgroundColor);
     const stageRef = useRef(null)
     const {
         lines,
@@ -27,6 +31,11 @@ const Board = () => {
         rectangles,
         circles,
         stars,
+        setLines,
+        setRectangles,
+        setCircles,
+        setStars,
+        setArrows,
         startDrawing,
         startArrowDrawing,
         startCircleDrawing,
@@ -37,6 +46,19 @@ const Board = () => {
         handleMouseMove,
         handleMouseUp,
     } = useDrawing();
+
+
+    const syncShapes = () => {
+        return [
+            ...lines.map((line, i) => ({ ...line, id: `line${i}`, type: 'line', stroke: shapeColor })),
+            ...rectangles.map((rect, i) => ({ ...rect, id: `rectangle${i}`, type: 'rectangle', fill: shapeColor })),
+            ...circles.map((circle, i) => ({ ...circle, id: `circle${i}`, type: 'circle', fill: shapeColor })),
+            ...stars.map((star, i) => ({ ...star, id: `star${i}`, type: 'star', fill: shapeColor })),
+            ...arrows.map((arrow, i) => ({ ...arrow, id: `arrow${i}`, type: 'arrow', fill: shapeColor })),
+            ...shapes
+        ];
+    };
+
 
 
     useEffect(() => {
@@ -56,7 +78,7 @@ const Board = () => {
     }, [imageData]);
 
     const handleDragEnd = (id: string, e: any) => {
-        const newShapes = shapes.map((shape) => {
+        const newShapes = syncShapes().map((shape) => {
             if (shape.id === id) {
                 return {
                     ...shape,
@@ -66,27 +88,51 @@ const Board = () => {
             }
             return shape;
         });
-        setHistory([...history, { shapes }]);
-        setShapes(newShapes);
-        setFuture([]);
+
+        // Sync the updated shapes back to individual state arrays
+        setLines(newShapes.filter(shape => shape.type === 'line'));
+        setRectangles(newShapes.filter(shape => shape.type === 'rect'));
+        setCircles(newShapes.filter(shape => shape.type === 'circle'));
+        setStars(newShapes.filter(shape => shape.type === 'star'));
+        setArrows(newShapes.filter(shape => shape.type === 'arrow'));
+
+        setHistory([...history, { shapes: newShapes }]); // Save to history
+        setFuture([]); // Reset future
     };
 
 
     const handleUndo = () => {
         if (history.length === 0) return;
-        const prevState = history[history.length - 1];
-        setFuture([{ shapes }, ...future]);
-        setShapes(prevState.shapes);
+
+        const prevState = history[history.length - 1].shapes;
+
+        // Split the shapes back into individual state arrays
+        setLines(prevState.filter(shape => shape.type === 'line'));
+        setRectangles(prevState.filter(shape => shape.type === 'rect'));
+        setCircles(prevState.filter(shape => shape.type === 'circle'));
+        setStars(prevState.filter(shape => shape.type === 'star'));
+        setArrows(prevState.filter(shape => shape.type === 'arrow'));
+
+        setFuture([{ shapes: syncShapes() }, ...future]);
         setHistory(history.slice(0, -1));
     };
 
     const handleRedo = () => {
         if (future.length === 0) return;
-        const nextState = future[0];
-        setHistory([...history, { shapes }]);
-        setShapes(nextState.shapes);
+
+        const nextState = future[0].shapes;
+
+        // Split the shapes back into individual state arrays
+        setLines(nextState.filter(shape => shape.type === 'line'));
+        setRectangles(nextState.filter(shape => shape.type === 'rect'));
+        setCircles(nextState.filter(shape => shape.type === 'circle'));
+        setStars(nextState.filter(shape => shape.type === 'star'));
+        setArrows(nextState.filter(shape => shape.type === 'arrow'));
+
+        setHistory([...history, { shapes: syncShapes() }]);
         setFuture(future.slice(1));
     };
+
 
     const downloadURI = (uri: string | undefined, name: string) => {
         const link = document.createElement("a");
@@ -129,7 +175,7 @@ const Board = () => {
                         <Line
                             key={i}
                             points={line.points}
-                            stroke={line.isErasing ? '#ffffff' : '#000000'}
+                            stroke={line.isErasing ? '#ffffff' : shapeColor}
                             strokeWidth={5}
                             tension={0.5}
                             lineCap="round"
@@ -145,9 +191,11 @@ const Board = () => {
                             points={arrow.points}
                             pointerLength={10}
                             pointerWidth={10}
-                            fill="#000"
-                            stroke="#000"
                             strokeWidth={4}
+                            fill={shapeColor}
+                            stroke={shapeColor}
+                            draggable
+                            onDragEnd={(e) => handleDragEnd(`arrow${i}`, e)}
                         />
                     ))}
 
@@ -157,7 +205,9 @@ const Board = () => {
                             x={circle.x}
                             y={circle.y}
                             radius={circle.radius}
-                            fill="#000"
+                            fill={shapeColor}
+                            draggable
+                            onDragEnd={(e) => handleDragEnd(`circle${i}`, e)}
                         />
                     ))}
 
@@ -169,7 +219,9 @@ const Board = () => {
                             numPoints={star.numPoints}
                             innerRadius={star.innerRadius}
                             outerRadius={star.outerRadius}
-                            fill="#000"
+                            fill={shapeColor}
+                            draggable
+                            onDragEnd={(e) => handleDragEnd(`star${i}`, e)}
                         />
                     ))}
 
@@ -180,7 +232,9 @@ const Board = () => {
                             y={rect.y}
                             width={rect.width}
                             height={rect.height}
-                            fill="#000"
+                            fill={shapeColor}
+                            draggable
+                            onDragEnd={(e) => handleDragEnd(`rectangle${i}`, e)}
                         />
                     ))}
 
@@ -217,7 +271,7 @@ const Board = () => {
                     <MenubarMenu>
                         <MenubarTrigger><Palette onClick={() => setShowColorPicker(!showColorPicker)} /></MenubarTrigger>
                         <MenubarContent>
-                            <HexColorPicker color={color} onChange={(newColor) => { setColor(newColor); changeColor(newColor); }} />
+                            <HexColorPicker color={shapeColor} onChange={(newColor) => setShapeColor(newColor)} />
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>

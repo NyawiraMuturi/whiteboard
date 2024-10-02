@@ -60,6 +60,7 @@ export const useDrawing = () => {
     const [isDrawingStar, setIsDrawingStar] = useState(false);
     const lastPosRef = useRef<{ x: number, y: number } | null>(null);
 
+    // Function to start freehand drawing
     const startDrawing = useCallback(() => {
         setIsErasing(false);
         setIsDrawing(true);
@@ -69,6 +70,7 @@ export const useDrawing = () => {
         setIsDrawingStar(false);
     }, []);
 
+    // Function to start erasing
     const startErasing = useCallback(() => {
         setIsDrawing(false);
         setIsErasing(true);
@@ -78,6 +80,7 @@ export const useDrawing = () => {
         setIsDrawingStar(false);
     }, []);
 
+    // Function to start arrow drawing
     const startArrowDrawing = useCallback(() => {
         setIsDrawing(false);
         setIsErasing(false);
@@ -87,6 +90,7 @@ export const useDrawing = () => {
         setIsDrawingStar(false);
     }, []);
 
+    // Function to start circle drawing
     const startCircleDrawing = useCallback(() => {
         setIsDrawing(false);
         setIsErasing(false);
@@ -96,6 +100,7 @@ export const useDrawing = () => {
         setIsDrawingStar(false);
     }, []);
 
+    // Function to start rectangle drawing
     const startRectangleDrawing = useCallback(() => {
         setIsDrawing(false);
         setIsErasing(false);
@@ -105,6 +110,7 @@ export const useDrawing = () => {
         setIsDrawingStar(false);
     }, []);
 
+    // Function to start star drawing
     const startStarDrawing = useCallback(() => {
         setIsDrawing(false);
         setIsErasing(false);
@@ -121,7 +127,23 @@ export const useDrawing = () => {
         if (pos) {
             lastPosRef.current = { x: pos.x, y: pos.y };
 
-            if (isDrawingArrow) {
+            if (isDrawing) {
+                setLines((prevLines) => [
+                    ...prevLines,
+                    {
+                        points: [pos.x, pos.y],
+                        isErasing: false,
+                    },
+                ]);
+            } else if (isErasing) {
+                setLines((prevLines) => [
+                    ...prevLines,
+                    {
+                        points: [pos.x, pos.y],
+                        isErasing: true,
+                    },
+                ]);
+            } else if (isDrawingArrow) {
                 setArrows((prevArrows) => [
                     ...prevArrows,
                     { points: [pos.x, pos.y] },
@@ -151,10 +173,20 @@ export const useDrawing = () => {
 
         const { x, y } = lastPosRef.current;
 
-        if (isDrawingArrow) {
+        if (isDrawing) {
+            setLines((prevLines) => {
+                const lastLine = prevLines[prevLines.length - 1];
+                lastLine.points = lastLine.points.concat([pos.x, pos.y]);
+                return [...prevLines.slice(0, -1), lastLine];
+            });
+        } else if (isErasing) {
+            setLines((prevLines) => {
+                const lastLine = prevLines[prevLines.length - 1];
+                lastLine.points = lastLine.points.concat([pos.x, pos.y]);
+                return [...prevLines.slice(0, -1), lastLine];
+            });
+        } else if (isDrawingArrow) {
             setArrows((prevArrows) => {
-                if (prevArrows.length === 0) return prevArrows;
-
                 const lastArrow = prevArrows[prevArrows.length - 1];
                 lastArrow.points = [x, y, pos.x, pos.y];
                 return [...prevArrows.slice(0, -1), lastArrow];
@@ -178,7 +210,7 @@ export const useDrawing = () => {
                 const lastStar = prevStars[prevStars.length - 1];
                 const outerRadius = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
                 lastStar.outerRadius = outerRadius;
-                lastStar.innerRadius = outerRadius / 2; // Inner radius is typically smaller
+                lastStar.innerRadius = outerRadius / 2;
                 return [...prevStars.slice(0, -1), lastStar];
             });
         }
@@ -200,6 +232,11 @@ export const useDrawing = () => {
         rectangles,
         circles,
         stars,
+        setLines,
+        setRectangles,
+        setCircles,
+        setStars,
+        setArrows,
         startDrawing,
         startArrowDrawing,
         startCircleDrawing,
@@ -211,4 +248,5 @@ export const useDrawing = () => {
         handleMouseUp,
     };
 };
+
 
